@@ -85,9 +85,9 @@
     
     #cameraStatus {
       font-size: 14px;
-      color: #666;
+      color: #fff;
       margin-top: 5px;
-      background-color: rgba(255,255,255,0.7);
+      background-color: rgba(0,0,0,0.5);
       padding: 4px 8px;
       border-radius: 4px;
       position: absolute;
@@ -110,6 +110,13 @@
         font-size: 16px;
       }
     }
+    
+    #debugInfo {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #666;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -121,33 +128,67 @@
   </div>
   
   <div class="button-container">
-    <button id="speakBtn" onclick="startListening()">
+    <button id="speakBtn" type="button">
       🎙️ Speak
     </button>
-    <button id="flipBtn" onclick="flipCamera()">
+    <button id="flipBtn" type="button">
       🔄 Flip Camera
     </button>
   </div>
   
   <p id="recognizedText">Say something to begin...</p>
+  <div id="debugInfo"></div>
   
   <script>
-    // Inline script to immediately attach button handlers
-    document.getElementById('flipBtn').addEventListener('click', function() {
-      console.log('Flip button clicked');
-      if (typeof flipCamera === 'function') {
-        flipCamera();
-      } else {
-        console.error('flipCamera function not available');
-      }
-    });
+    // Test for mobile browser
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    document.getElementById('speakBtn').addEventListener('click', function() {
-      console.log('Speak button clicked');
-      if (typeof startListening === 'function') {
-        startListening();
-      } else {
-        console.error('startListening function not available');
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded, setting up button handlers');
+      
+      // Directly attach event listeners
+      document.getElementById('flipBtn').addEventListener('click', function(e) {
+        e.preventDefault(); // Prevent any default action
+        console.log('Flip button clicked directly');
+        
+        // Add a brief delay for mobile
+        setTimeout(function() {
+          if (typeof window.flipCamera === 'function') {
+            window.flipCamera();
+          } else {
+            console.error('flipCamera function not available');
+            document.getElementById('cameraStatus').textContent = 'Camera flip function not found';
+          }
+        }, 100);
+      });
+      
+      document.getElementById('speakBtn').addEventListener('click', function(e) {
+        e.preventDefault(); // Prevent any default action
+        console.log('Speak button clicked directly');
+        
+        if (typeof window.startListening === 'function') {
+          window.startListening();
+        } else {
+          console.error('startListening function not available');
+        }
+      });
+      
+      // For testing on mobile, add a debug feature
+      if (isMobile) {
+        // Double tap anywhere to show debug info
+        let lastTap = 0;
+        document.addEventListener('touchend', function(e) {
+          const currentTime = new Date().getTime();
+          const tapLength = currentTime - lastTap;
+          if (tapLength < 500 && tapLength > 0) {
+            // Double tap detected
+            if (typeof window.debugCameraInfo === 'function') {
+              window.debugCameraInfo();
+            }
+          }
+          lastTap = currentTime;
+        });
       }
     });
   </script>

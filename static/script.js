@@ -1,6 +1,8 @@
 // script.js
 const video = document.getElementById('video');
 const recognizedText = document.getElementById('recognizedText');
+const assistantReply = document.getElementById('assistantReply');
+
 let currentStream = null;
 let videoDevices = [];
 let currentDeviceIndex = 0;
@@ -14,7 +16,7 @@ async function initCamera(index = 0) {
     const constraints = {
         video: videoDevices.length > 0
             ? { deviceId: { exact: videoDevices[index].deviceId } }
-            : { facingMode: "environment" },
+            : { facingMode: (currentDeviceIndex % 2 === 0 ? "user" : "environment") },
         audio: false
     };
 
@@ -75,21 +77,24 @@ recognition.onresult = async (event) => {
     canvas.getContext('2d').drawImage(video, 0, 0);
     const imageData = canvas.toDataURL('image/jpeg');
 
-    const response = await fetch('/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: speech, image: imageData })
-    });
+    try {
+        const response = await fetch('/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text: speech, image: imageData })
+        });
 
-    const data = await response.json();
-
-    recognizedText.innerText += `\nLocation: ${data.location}`;
-    recognizedText.innerText += `\nDetected: ${data.object}`;
-    recognizedText.innerText += `\nAssistant: ${data.reply}`;
-
-    speak(`${data.location}. I see ${data.object}. ${data.reply}`);
+        const data = await response.json();
+        assistantReply.innerText = `Assistant: ${data.reply}`;
+        speak(data.reply);
+    } catch (err) {
+        console.error('Error fetching assistant reply:', err);
+    }
 };
 
+// Speech synthesis
 function speak(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.4;

@@ -49,10 +49,11 @@ def handle_query():
     img_path = save_base64_image(image_b64, filename)
 
     # Object detection
-    detection_result = model(img_path)[0]  # First result
+    results = model(img_path)
+    detection_result = results[0]
     labels = detection_result.names
-    boxes = detection_result.boxes.cls
-    if boxes.nelement() > 0:
+    boxes = detection_result.boxes.cls if detection_result.boxes is not None else []
+    if len(boxes) > 0:
         cls_id = int(boxes[0].item())
         detected_label = labels[cls_id]
     else:
@@ -66,4 +67,3 @@ def handle_query():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-

@@ -1,6 +1,7 @@
 // script.js
 const video = document.getElementById('video');
 const recognizedText = document.getElementById('recognizedText');
+const flipBtn = document.getElementById('flipBtn');
 
 let currentStream = null;
 let videoDevices = [];
@@ -18,7 +19,6 @@ async function initCamera(index = 0) {
             : { facingMode: (currentDeviceIndex % 2 === 0 ? "user" : "environment") },
         audio: false
     };
-
 
     try {
         currentStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -53,6 +53,9 @@ async function setupDevices() {
     }
 }
 setupDevices();
+
+// Add event listener to flip camera button
+flipBtn.addEventListener('click', flipCamera);
 
 // Speech recognition setup
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

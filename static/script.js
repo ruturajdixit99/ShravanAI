@@ -13,9 +13,12 @@ async function initCamera(index = 0) {
     }
 
     const constraints = {
-        video: { deviceId: { exact: videoDevices[index].deviceId } },
+        video: videoDevices.length > 0
+            ? { deviceId: { exact: videoDevices[index].deviceId } }
+            : { facingMode: (currentDeviceIndex % 2 === 0 ? "user" : "environment") },
         audio: false
     };
+
 
     try {
         currentStream = await navigator.mediaDevices.getUserMedia(constraints);

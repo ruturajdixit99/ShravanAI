@@ -6,60 +6,81 @@ const statusDisplay = document.getElementById('cameraStatus');
 
 // Camera state variables
 let currentStream = null;
-let videoDevices = [];
-let currentDeviceIndex = 0;
-let facingMode = 'user'; // Start with front camera
+let facingMode = 'user'; // Start with front camera (selfie)
 let isSwitchingCamera = false;
 
-// Initialize webcam with selected device or facing mode
+// Initialize webcam with selected facing mode
 async function initCamera() {
     try {
         // Stop any existing stream
         if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
+            currentStream.getTracks().forEach(track => {
+                track.stop();
+            });
+            currentStream = null;
         }
         
         // Set status to loading
         statusDisplay.textContent = "Accessing camera...";
         
-        // Set constraints based on available information
-        let constraints;
+        // Force stop and clear video source
+        video.srcObject = null;
         
-        if (videoDevices.length > 1 && videoDevices[currentDeviceIndex].deviceId) {
-            // If we have multiple device IDs, use them
-            constraints = {
-                video: { deviceId: { exact: videoDevices[currentDeviceIndex].deviceId } },
-                audio: false
-            };
-            statusDisplay.textContent = `Using camera ${currentDeviceIndex + 1} of ${videoDevices.length}`;
-        } else {
-            // Fallback to facingMode approach
-            constraints = {
-                video: { facingMode: facingMode },
-                audio: false
-            };
-            statusDisplay.textContent = `Using ${facingMode === 'user' ? 'front' : 'back'} camera`;
-        }
+        // Wait a moment to ensure previous camera is fully released
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        console.log('Using constraints:', constraints);
+        // Set constraints specifically for mobile
+        // IMPORTANT: Use exact constraint to force the specific camera
+        const constraints = {
+            video: {
+                facingMode: { exact: facingMode }
+            },
+            audio: false
+        };
+        
+        console.log(`Trying to access camera with facingMode: { exact: ${facingMode} }`);
         
         // Get media stream
         currentStream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = currentStream;
         
-        // Show which camera is active
+        // Log which camera is active
         const videoTrack = currentStream.getVideoTracks()[0];
         console.log('Active camera:', videoTrack.label);
+        statusDisplay.textContent = `Using ${facingMode === 'user' ? 'front' : 'back'} camera`;
         
         return true; // Success
     } catch (err) {
         console.error('Camera access error:', err);
-        statusDisplay.textContent = `Camera error: ${err.message}`;
+        
+        // If "exact" constraint fails, try without "exact"
+        if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
+            try {
+                console.log('Trying with relaxed constraints');
+                const relaxedConstraints = {
+                    video: { facingMode: facingMode },
+                    audio: false
+                };
+                
+                currentStream = await navigator.mediaDevices.getUserMedia(relaxedConstraints);
+                video.srcObject = currentStream;
+                
+                const videoTrack = currentStream.getVideoTracks()[0];
+                console.log('Active camera (relaxed):', videoTrack.label);
+                statusDisplay.textContent = `Using ${facingMode === 'user' ? 'front' : 'back'} camera`;
+                
+                return true;
+            } catch (relaxedErr) {
+                console.error('Relaxed constraints also failed:', relaxedErr);
+            }
+        }
+        
+        statusDisplay.textContent = `Camera error: ${err.name}`;
         return false; // Failed
     }
 }
 
-// Flip between available cameras
+// Flip between front and back cameras
 async function flipCamera() {
     // Prevent multiple rapid clicks
     if (isSwitchingCamera) {
@@ -71,96 +92,74 @@ async function flipCamera() {
     statusDisplay.textContent = "Switching camera...";
     
     try {
-        if (videoDevices.length > 1) {
-            // If we have properly enumerated multiple devices
-            currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-            console.log(`Switching to device index ${currentDeviceIndex}`);
-        } else {
-            // Toggle facingMode for devices that don't report multiple cameras
-            facingMode = facingMode === 'user' ? 'environment' : 'user';
-            console.log(`Switching facingMode to ${facingMode}`);
-        }
+        // Toggle between front and back camera
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        console.log(`Attempting to switch to ${facingMode} camera`);
         
-        // Try the primary approach
+        // Try to initialize with new facing mode
         let success = await initCamera();
         
-        // If primary approach fails, try the alternate approach
-        if (!success && videoDevices.length > 1) {
-            console.log('Falling back to facingMode approach');
-            facingMode = facingMode === 'user' ? 'environment' : 'user';
-            success = await initCamera();
-        }
-        
         if (!success) {
-            statusDisplay.textContent = "Failed to switch camera.";
+            console.log('First attempt failed, trying alternative approach');
+            
+            // If failed, try a different approach based on device
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            // iOS sometimes needs a longer delay to release camera resources
+            if (isIOS) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // Try one more time with simple constraints
+            try {
+                const simpleConstraints = {
+                    video: true,
+                    audio: false
+                };
+                
+                // Stop any existing stream again to be sure
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+                
+                video.srcObject = null;
+                
+                // Try to get any camera
+                currentStream = await navigator.mediaDevices.getUserMedia(simpleConstraints);
+                video.srcObject = currentStream;
+                
+                statusDisplay.textContent = "Camera switched (basic mode)";
+                console.log('Using basic camera mode');
+            } catch (finalErr) {
+                console.error('All camera switching attempts failed:', finalErr);
+                statusDisplay.textContent = 'Could not switch camera';
+            }
         }
     } catch (err) {
-        console.error('Error flipping camera:', err);
-        statusDisplay.textContent = 'Error switching camera.';
+        console.error('Error in flipCamera function:', err);
+        statusDisplay.textContent = 'Error switching camera';
     } finally {
         isSwitchingCamera = false;
     }
 }
 
-// Setup available devices on page load
-async function setupDevices() {
+// Initialize the app on load
+async function initApp() {
     try {
         statusDisplay.textContent = "Requesting camera permission...";
         
-        // First try to get permission
-        const initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Request permission for video
+        await navigator.mediaDevices.getUserMedia({ video: true });
         
-        // Stop this initial stream
-        initialStream.getTracks().forEach(track => track.stop());
-        
-        // Then enumerate devices (works better after permission is granted)
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        videoDevices = devices.filter(d => d.kind === "videoinput");
-        
-        console.log(`Found ${videoDevices.length} video devices:`, videoDevices);
-        
-        if (videoDevices.length === 0) {
-            statusDisplay.textContent = "No camera found.";
-            return;
-        }
-        
-        // Initialize with first camera
+        // Initialize with front camera
         await initCamera();
         
     } catch (err) {
-        console.error("Error initializing devices:", err);
-        statusDisplay.textContent = `Setup error: ${err.message}`;
-        
-        // Try fallback approach with facingMode
-        try {
-            console.log('Trying fallback with facingMode');
-            facingMode = 'user';
-            await initCamera();
-        } catch (fallbackErr) {
-            console.error('Fallback failed:', fallbackErr);
-            statusDisplay.textContent = "Could not access any camera.";
-        }
+        console.error("Error initializing app:", err);
+        statusDisplay.textContent = `Camera error: ${err.message}`;
     }
 }
-
-// Handle device change events (like plugging/unplugging cameras)
-navigator.mediaDevices.addEventListener('devicechange', async () => {
-    console.log('Device configuration changed');
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        videoDevices = devices.filter(d => d.kind === "videoinput");
-        
-        // Ensure current index is valid
-        if (currentDeviceIndex >= videoDevices.length) {
-            currentDeviceIndex = 0;
-        }
-        
-        // Update status
-        statusDisplay.textContent = `Devices updated. Found ${videoDevices.length} cameras.`;
-    } catch (err) {
-        console.error('Error handling device change:', err);
-    }
-});
 
 // Speech recognition setup
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -240,9 +239,22 @@ function speak(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// Make flipCamera function globally accessible for the onclick handler
+// Make functions globally accessible
 window.flipCamera = flipCamera;
 window.startListening = startListening;
 
-// Start setup on page load
-document.addEventListener('DOMContentLoaded', setupDevices);
+// Add debug function for mobile testing
+window.debugCameraInfo = async function() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
+        console.log("Available cameras:", videoDevices);
+        alert(`Found ${videoDevices.length} cameras: ${videoDevices.map(d => d.label || 'unnamed').join(', ')}`);
+    } catch (err) {
+        console.error("Debug error:", err);
+        alert(`Debug error: ${err.message}`);
+    }
+};
+
+// Initialize app on page load
+document.addEventListener('DOMContentLoaded', initApp);

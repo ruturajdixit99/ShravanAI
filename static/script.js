@@ -6,17 +6,18 @@ const assistantReply = document.getElementById('assistantReply');
 let currentStream = null;
 let videoDevices = [];
 let currentDeviceIndex = 0;
+let usingFacingMode = 'user';
 
-// Initialize webcam feed with selected device
-async function initCamera(index = 0) {
+// Initialize webcam feed with selected device or facing mode
+async function initCamera(index = 0, facing = 'user') {
     if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
     }
 
     const constraints = {
-        video: videoDevices.length > 0
+        video: videoDevices.length > 1
             ? { deviceId: { exact: videoDevices[index].deviceId } }
-            : { facingMode: (currentDeviceIndex % 2 === 0 ? "user" : "environment") },
+            : { facingMode: { exact: facing } },
         audio: false
     };
 
@@ -28,14 +29,15 @@ async function initCamera(index = 0) {
     }
 }
 
-// Flip between available video devices
+// Flip between available video devices or toggle facingMode
 async function flipCamera() {
-    if (videoDevices.length <= 1) {
-        alert("Only one camera found!");
-        return;
+    if (videoDevices.length > 1) {
+        currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
+        await initCamera(currentDeviceIndex);
+    } else {
+        usingFacingMode = usingFacingMode === 'user' ? 'environment' : 'user';
+        await initCamera(0, usingFacingMode);
     }
-    currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-    await initCamera(currentDeviceIndex);
 }
 
 // Setup available devices on page load

@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Shravan Visual Assistant</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 20px;
+      padding: 15px;
       max-width: 800px;
       margin: 0 auto;
+      background-color: #f9f9f9;
     }
     
     h1 {
@@ -24,25 +25,27 @@
       width: 100%;
       max-width: 640px;
       margin: 0 auto 15px;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
     }
     
     video {
-      border: 2px solid #333;
       width: 100%;
-      border-radius: 8px;
-      background-color: #f0f0f0;
+      display: block;
+      background-color: #000;
     }
     
     .button-container {
       display: flex;
       justify-content: center;
-      gap: 10px;
+      gap: 12px;
       margin: 15px 0;
       flex-wrap: wrap;
     }
     
     button {
-      padding: 10px 20px;
+      padding: 12px 20px;
       font-size: 16px;
       background-color: #4285f4;
       color: white;
@@ -52,7 +55,8 @@
       display: flex;
       align-items: center;
       gap: 5px;
-      transition: background-color 0.3s;
+      transition: background-color 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     
     button:hover {
@@ -61,24 +65,45 @@
     
     button:active {
       background-color: #2a56c6;
+      transform: translateY(1px);
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
     }
     
     #recognizedText {
       margin-top: 15px;
       font-size: 18px;
       min-height: 2em;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
     #cameraStatus {
       font-size: 14px;
       color: #666;
       margin-top: 5px;
+      background-color: rgba(255,255,255,0.7);
+      padding: 4px 8px;
+      border-radius: 4px;
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
     }
     
     @media (max-width: 480px) {
       button {
-        padding: 8px 16px;
+        padding: 10px 16px;
         font-size: 14px;
+        flex-grow: 1;
+      }
+      
+      .button-container {
+        gap: 8px;
       }
       
       #recognizedText {
@@ -91,20 +116,41 @@
   <h1>👁️ Shravan Visual Assistant</h1>
   
   <div class="video-container">
-    <video id="video" autoplay playsinline></video>
-    <p id="cameraStatus">Initializing camera...</p>
+    <video id="video" autoplay playsinline muted></video>
+    <div id="cameraStatus">Initializing camera...</div>
   </div>
   
   <div class="button-container">
     <button id="speakBtn" onclick="startListening()">
-      <span>🎙️ Speak</span>
+      🎙️ Speak
     </button>
     <button id="flipBtn" onclick="flipCamera()">
-      <span>🔄 Flip Camera</span>
+      🔄 Flip Camera
     </button>
   </div>
   
   <p id="recognizedText">Say something to begin...</p>
+  
+  <script>
+    // Inline script to immediately attach button handlers
+    document.getElementById('flipBtn').addEventListener('click', function() {
+      console.log('Flip button clicked');
+      if (typeof flipCamera === 'function') {
+        flipCamera();
+      } else {
+        console.error('flipCamera function not available');
+      }
+    });
+    
+    document.getElementById('speakBtn').addEventListener('click', function() {
+      console.log('Speak button clicked');
+      if (typeof startListening === 'function') {
+        startListening();
+      } else {
+        console.error('startListening function not available');
+      }
+    });
+  </script>
   
   <script src="/static/scripts.js"></script>
 </body>

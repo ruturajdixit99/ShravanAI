@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shravan Visual Assistant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    video {
+      border: 2px solid #333;
+      width: 80%;
+      max-width: 640px;
+      height: auto;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    #recognizedText {
+      margin-top: 20px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>👁️ Shravan Visual Assistant</h1>
+  <video id="video" autoplay playsinline></video>
+  <br>
+  <button onclick="startListening()">🎙️ Speak</button>
+  <p id="recognizedText">Say something to begin...</p>
+
+  <script src="script.js"></script>
+</body>
+</html>

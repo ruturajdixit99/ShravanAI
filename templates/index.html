@@ -4,26 +4,10 @@
   <meta charset="UTF-8">
   <title>Shravan Visual Assistant</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-    }
-    video {
-      border: 2px solid #333;
-      width: 80%;
-      max-width: 640px;
-      height: auto;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 10px;
-      font-size: 18px;
-    }
-    #recognizedText, #assistantReply {
-      margin-top: 20px;
-      font-size: 20px;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
+    video { border: 2px solid #333; width: 80%; max-width: 640px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 18px; }
+    p { font-size: 18px; margin: 10px 0; }
   </style>
 </head>
 <body>
@@ -32,6 +16,8 @@
   <button onclick="startListening()">🎙️ Speak</button>
   <button onclick="flipCamera()">🔄 Flip Camera</button>
   <p id="recognizedText">Say something to begin...</p>
+  <p id="detectedText"></p>
+  <p id="locationText"></p>
   <p id="assistantReply"></p>
   <script src="/static/script.js"></script>
 </body>

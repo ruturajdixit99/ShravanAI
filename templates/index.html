@@ -1,198 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8">
   <title>Shravan Visual Assistant</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 15px;
-      max-width: 800px;
-      margin: 0 auto;
-      background-color: #f9f9f9;
+      padding: 30px;
     }
-    
-    h1 {
-      color: #333;
-      font-size: 24px;
-      margin-bottom: 15px;
-    }
-    
-    .video-container {
-      position: relative;
-      width: 100%;
-      max-width: 640px;
-      margin: 0 auto 15px;
-      border-radius: 8px;
-      overflow: hidden;
-      background-color: #000;
-    }
-    
     video {
-      width: 100%;
-      display: block;
-      background-color: #000;
+      border: 2px solid #333;
+      width: 80%;
+      max-width: 640px;
+      height: auto;
     }
-    
-    .button-container {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin: 15px 0;
-      flex-wrap: wrap;
-    }
-    
     button {
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #4285f4;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      transition: background-color 0.2s;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    
-    button:hover {
-      background-color: #3367d6;
-    }
-    
-    button:active {
-      background-color: #2a56c6;
-      transform: translateY(1px);
-    }
-    
-    button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
-    
-    #recognizedText {
-      margin-top: 15px;
+      padding: 10px 20px;
+      margin: 10px;
       font-size: 18px;
-      min-height: 2em;
-      padding: 10px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    
-    #cameraStatus {
-      font-size: 14px;
-      color: #fff;
-      margin-top: 5px;
-      background-color: rgba(0,0,0,0.5);
-      padding: 4px 8px;
-      border-radius: 4px;
-      position: absolute;
-      bottom: 8px;
-      left: 8px;
-    }
-    
-    @media (max-width: 480px) {
-      button {
-        padding: 10px 16px;
-        font-size: 14px;
-        flex-grow: 1;
-      }
-      
-      .button-container {
-        gap: 8px;
-      }
-      
-      #recognizedText {
-        font-size: 16px;
-      }
-    }
-    
-    #debugInfo {
-      margin-top: 5px;
-      font-size: 12px;
-      color: #666;
-      display: none;
+    #recognizedText, #assistantReply {
+      margin-top: 20px;
+      font-size: 20px;
     }
   </style>
 </head>
 <body>
   <h1>👁️ Shravan Visual Assistant</h1>
-  
-  <div class="video-container">
-    <video id="video" autoplay playsinline muted></video>
-    <div id="cameraStatus">Initializing camera...</div>
-  </div>
-  
-  <div class="button-container">
-    <button id="speakBtn" type="button">
-      🎙️ Speak
-    </button>
-    <button id="flipBtn" type="button">
-      🔄 Flip Camera
-    </button>
-  </div>
-  
+  <video id="video" autoplay playsinline></video><br>
+  <button onclick="startListening()">🎙️ Speak</button>
+  <button onclick="flipCamera()">🔄 Flip Camera</button>
   <p id="recognizedText">Say something to begin...</p>
-  <div id="debugInfo"></div>
-  
-  <script>
-    // Test for mobile browser
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM loaded, setting up button handlers');
-      
-      // Directly attach event listeners
-      document.getElementById('flipBtn').addEventListener('click', function(e) {
-        e.preventDefault(); // Prevent any default action
-        console.log('Flip button clicked directly');
-        
-        // Add a brief delay for mobile
-        setTimeout(function() {
-          if (typeof window.flipCamera === 'function') {
-            window.flipCamera();
-          } else {
-            console.error('flipCamera function not available');
-            document.getElementById('cameraStatus').textContent = 'Camera flip function not found';
-          }
-        }, 100);
-      });
-      
-      document.getElementById('speakBtn').addEventListener('click', function(e) {
-        e.preventDefault(); // Prevent any default action
-        console.log('Speak button clicked directly');
-        
-        if (typeof window.startListening === 'function') {
-          window.startListening();
-        } else {
-          console.error('startListening function not available');
-        }
-      });
-      
-      // For testing on mobile, add a debug feature
-      if (isMobile) {
-        // Double tap anywhere to show debug info
-        let lastTap = 0;
-        document.addEventListener('touchend', function(e) {
-          const currentTime = new Date().getTime();
-          const tapLength = currentTime - lastTap;
-          if (tapLength < 500 && tapLength > 0) {
-            // Double tap detected
-            if (typeof window.debugCameraInfo === 'function') {
-              window.debugCameraInfo();
-            }
-          }
-          lastTap = currentTime;
-        });
-      }
-    });
-  </script>
-  
-  <script src="/static/scripts.js"></script>
+  <p id="assistantReply"></p>
+  <script src="/static/script.js"></script>
 </body>
 </html>

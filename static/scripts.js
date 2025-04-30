@@ -34,8 +34,8 @@ recognition.onresult = async (event) => {
     canvas.getContext('2d').drawImage(video, 0, 0);
     const imageData = canvas.toDataURL('image/jpeg');
 
-    // Send text + image to backend
-    const response = await fetch('http://localhost:5000/query', {
+    // Use ngrok or your domain in production
+    const response = await fetch('/query', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -49,6 +49,8 @@ recognition.onresult = async (event) => {
 
 function speak(text) {
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.2;
+    utterance.rate = 1.4; // Human-like fast pace
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
     window.speechSynthesis.speak(utterance);
 }

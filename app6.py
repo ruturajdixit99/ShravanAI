@@ -72,8 +72,7 @@ def query():
             try:
                 os.remove(path)
                 app.logger.info(f"Deleted frame after error: {path}")
-            except Exception:
-m_err:
+            except Exception as rm_err:
                 app.logger.warning(f"Failed to delete frame: {path} - {rm_err}")
             return jsonify(error=f"OpenAI API error: {oe}"), 502
 

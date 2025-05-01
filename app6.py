@@ -34,21 +34,21 @@ def query():
         if not speech or not img_b64:
             raise ValueError("Missing 'text' or 'image'")
 
-        # save image
+        # Save image to disk
         fname = f"frame_{datetime.now().strftime('%H%M%S')}.jpg"
         path = os.path.join('static', fname)
         with open(path,'wb') as f:
             f.write(base64.b64decode(img_b64.split(',',1)[1]))
         app.logger.info(f"Saved image {path}")
 
-        # detect object
+        # Object detection
         res = model(path)[0]
         cls = res.boxes.cls
         names = res.names
         obj = names[int(cls[0])] if cls.nelement()>0 else 'nothing recognizable'
         app.logger.info(f"Detected: {obj}")
 
-        # get location
+        # Geolocation
         try:
             loc = requests.get('https://ipapi.co/json/').json()
             location = f"You are in {loc.get('city')}, {loc.get('country_name')}"
@@ -68,7 +68,21 @@ def query():
             app.logger.info(f"GPT reply: {reply}")
         except Exception as oe:
             app.logger.error("OpenAI API call failed", exc_info=oe)
+            # cleanup the saved frame even on error
+            try:
+                os.remove(path)
+                app.logger.info(f"Deleted frame after error: {path}")
+            except Exception:
+m_err:
+                app.logger.warning(f"Failed to delete frame: {path} - {rm_err}")
             return jsonify(error=f"OpenAI API error: {oe}"), 502
+
+        # Remove frame after successful use
+        try:
+            os.remove(path)
+            app.logger.info(f"Deleted frame: {path}")
+        except Exception as rm_e:
+            app.logger.warning(f"Failed to delete frame: {path} - {rm_e}")
 
         return jsonify(reply=reply, object=obj, location=location)
 

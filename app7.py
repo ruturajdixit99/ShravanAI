@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 app.logger.setLevel(logging.INFO)
 
 # Load API key
-openai.api_key = os.getenv("OPENAI_API_KEY", "your-openai-key-here")
+openai.api_key = 
 
 # Ensure static directory exists
 os.makedirs('static', exist_ok=True)

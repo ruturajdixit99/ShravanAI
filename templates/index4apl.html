@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision Assistant for Visually Impaired</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #007aff, #5856d6, #af52de, #ff2d55);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+        }
+        .stop-btn {
+            background-color: #e74c3c;
+        }
+        .stop-btn:hover {
+            background-color: #c0392b;
+        }
+        #stop-speaking {
+            background-color: #9b59b6;
+        }
+        #stop-speaking:hover {
+            background-color: #8e44ad;
+        }
+        #stop-speaking:disabled {
+            background-color: #95a5a6;
+        }
+        .video-container {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 5px;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .response {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 5px solid #3498db;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .objects-detected {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+        .loading:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80% { content: '....'; }
+            100% { content: '.....'; }
+        }
+        .speech-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255,255,255,0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: none;
+            font-weight: bold;
+        }
+        .recording .speech-indicator {
+            display: block;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="gradient-text">Vision Assistant</h1>
+        <p class="gradient-text">An assistive technology tool for visually impaired users</p>
+        
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div class="speech-indicator">Recording...</div>
+        </div>
+        
+        <div class="controls">
+            <button id="start-camera" class="primary-btn">Start Camera</button>
+            <button id="voice-command" disabled>Hold to Speak</button>
+            <button id="capture-describe" disabled>Capture & Describe Scene</button>
+            <button id="stop-speaking" disabled>Stop Speaking</button>
+        </div>
+        
+        <div class="loading" id="loading">Processing</div>
+        
+        <div class="response" id="response">
+            <p>Press "Start Camera" to begin. Then either:</p>
+            <ul>
+                <li>Hold the "Hold to Speak" button and give a voice command</li>
+                <li>Or press "Capture & Describe Scene" for a general description</li>
+            </ul>
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        // DOM elements
+        const videoEl = document.getElementById('video');
+        const startBtn = document.getElementById('start-camera');
+        const voiceBtn = document.getElementById('voice-command');
+        const captureBtn = document.getElementById('capture-describe');
+        const stopSpeakBtn = document.getElementById('stop-speaking');
+        const responseEl = document.getElementById('response');
+        const statusEl = document.getElementById('status');
+        const loadingEl = document.getElementById('loading');
+        const containerEl = document.querySelector('.video-container');
+
+        let stream = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let speaking = false;
+        let speechSynthesisUtterance = null;
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' },
+                    audio: false 
+                });
+                videoEl.srcObject = stream;
+                startBtn.disabled = true;
+                voiceBtn.disabled = false;
+                captureBtn.disabled = false;
+                stopSpeakBtn.disabled = false;
+                updateStatus('Camera started successfully');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                updateStatus(`Error accessing camera: ${error.message}`, true);
+            }
+        });
+
+        function stopSpeaking() {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                stopSpeakBtn.classList.remove('active');
+                updateStatus('Speech stopped');
+            }
+        }
+
+        stopSpeakBtn.addEventListener('click', stopSpeaking);
+
+        voiceBtn.addEventListener('mousedown', e => {
+            stopSpeaking();
+            startRecording(e);
+        });
+        voiceBtn.addEventListener('touchstart', e => {
+            stopSpeaking();
+            startRecording(e);
+        });
+        voiceBtn.addEventListener('mouseup', stopRecording);
+        voiceBtn.addEventListener('touchend', stopRecording);
+        voiceBtn.addEventListener('mouseleave', stopRecording);
+
+        async function startRecording(e) {
+            e.preventDefault();
+            
+            try {
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(audioStream);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.start();
+                speaking = true;
+                containerEl.classList.add('recording');
+                voiceBtn.classList.add('stop-btn');
+                voiceBtn.textContent = 'Release to Send';
+                updateStatus('Recording voice command...');
+            } catch (error) {
+                console.error('Error starting voice recording:', error);
+                updateStatus(`Microphone access error: ${error.message}`, true);
+            }
+        }
+
+        function stopRecording() {
+            if (!speaking) return;
+            
+            speaking = false;
+            containerEl.classList.remove('recording');
+            voiceBtn.classList.remove('stop-btn');
+            voiceBtn.textContent = 'Hold to Speak';
+            
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                
+                mediaRecorder.onstop = async () => {
+                    updateStatus('Processing your voice command...');
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                        const base64Audio = reader.result;
+                        await captureAndProcess('', base64Audio);
+                    };
+                    reader.readAsDataURL(audioBlob);
+                    
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                };
+            }
+        }
+
+        captureBtn.addEventListener('click', async () => {
+            stopSpeaking();
+            await captureAndProcess('Describe what you see and tell me where I am.');
+        });
+
+        async function captureAndProcess(text = '', audioData = null) {
+            if (!stream) {
+                updateStatus('Camera not started', true);
+                return;
+            }
+            
+            try {
+                loadingEl.style.display = 'block';
+                stopSpeakBtn.disabled = true;
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = videoEl.videoWidth;
+                canvas.height = videoEl.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(videoEl, 0, 0);
+                
+                const imageBase64 = canvas.toDataURL('image/jpeg');
+                
+                const requestData = {
+                    image: imageBase64,
+                    text: text
+                };
+                
+                if (audioData) {
+                    requestData.audio = audioData;
+                }
+                
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let responseText = `<p>${data.reply}</p>`;
+                    
+                    if (data.speech_recognized) {
+                        responseText += `<p><small>You said: "${data.speech_recognized}"</small></p>`;
+                    }
+                    
+                    if (data.objects && data.objects.length > 0) {
+                        responseText += `<div class="objects-detected">
+                            <strong>Objects detected:</strong> ${data.objects.join(', ')}
+                        </div>`;
+                    }
+                    
+                    responseEl.innerHTML = responseText;
+                    
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                        
+                        const utterance = new SpeechSynthesisUtterance(data.reply);
+                        utterance.rate = 1.1;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 1.0;
+                        
+                        const voices = window.speechSynthesis.getVoices();
+                        if (voices.length > 0) {
+                            const preferredVoice = voices.find(voice => 
+                                (voice.name.includes('English') || voice.lang.startsWith('en')) && 
+                                voice.name.includes('Female')
+                            );
+                            
+                            if (preferredVoice) {
+                                utterance.voice = preferredVoice;
+                            }
+                        }
+                        
+                        stopSpeakBtn.disabled = false;
+                        stopSpeakBtn.classList.add('active');
+                        
+                        utterance.onend = function() {
+                            stopSpeakBtn.classList.remove('active');
+                        };
+                        
+                        speechSynthesisUtterance = utterance;
+                        window.speechSynthesis.speak(utterance);
+                    }
+                    
+                    updateStatus(`Response received at ${new Date().toLocaleTimeString()}`);
+                } else {
+                    updateStatus(`Error: ${data.error || 'Unknown error'}`, true);
+                }
+            } catch (error) {
+                console.error('Error processing request:', error);
+                updateStatus(`Error: ${error.message}`, true);
+            } finally {
+                loadingEl.style.display = 'none';
+                stopSpeakBtn.disabled = false;
+            }
+        }
+
+        function updateStatus(message, isError = false) {
+            statusEl.textContent = message;
+            if (isError) {
+                statusEl.classList.add('error');
+            } else {
+                statusEl.classList.remove('error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                updateStatus('Your browser doesn\'t support camera access. Please use a modern browser.', true);
+                startBtn.disabled = true;
+            }
+            if (!window.MediaRecorder) {
+                updateStatus('Your browser doesn\'t support audio recording. Voice commands won\'t work.', true);
+                voiceBtn.disabled = true;
+            }
+            if ('speechSynthesis' in window) {
+                speechSynthesis.onvoiceschanged = function() {
+                    const voices = window.speechSynthesis.getVoices();
+                    console.log(`${voices.length} speech synthesis voices available`);
+                };
+                window.speechSynthesis.getVoices();
+            } else {
+                updateStatus('Your browser doesn\'t support speech synthesis.', true);
+                stopSpeakBtn.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
